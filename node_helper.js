@@ -1,33 +1,34 @@
 /* global require */
 
-const _          = require('lodash');
-const Color      = require('color');
+const _ = require('lodash');
+const Color = require('color');
 const NodeHelper = require('node_helper');
 const bodyParser = require('body-parser');
-const LPD8806    = require('lpd8806-async');
-const async      = require('async');
+const LPD8806 = require('lpd8806-async');
+//const WS2801	 = require('rpi-ws2801');
+const async = require('async');
 
 var ajv = require('ajv')({
-    allErrors:   true,
-    format:      'full',
+    allErrors: true,
+    format: 'full',
     coerceTypes: true
 });
 
 module.exports = NodeHelper.create({
 
-    config:               {},
-    animationRunning:     false,
+    config: {},
+    animationRunning: false,
     stopAnimationRequest: false,
-    defaultSpeed:         100,
+    defaultSpeed: 100,
 
     /**
      * node_helper start method
      */
-    start: function() {
+    start: function () {
         console.log('[PiLights] Starting node_helper');
 
         this.expressApp.use(bodyParser.json());
-        this.expressApp.use(bodyParser.urlencoded({extended: true}));
+        this.expressApp.use(bodyParser.urlencoded({ extended: true }));
 
         this.expressApp.get('/PiLights', (req, res) => {
             console.error('[PiLights] Incoming:', req.query);
@@ -49,14 +50,40 @@ module.exports = NodeHelper.create({
                                 error: err.message
                             });
                     });
-
-            } else {
+	    } else if (typeof req.query.r !== 'undefined' ||
+		       typeof req.query.g !== 'undefined' ||
+		       typeof req.query.b !== 'undefined') {
+		    r = Number(req.query.r) || 0;
+		    g = Number(req.query.g) || 0;
+		    b = Number(req.query.b) || 0;
+		    console.error(r + " " + g + " " + b);
+		    if (typeof req.query.id !== 'undefined') {
+			id = Number(req.query.id) || 0;
+			this.leds.setColor(id, [r,g,b]);
+			this.leds.update();
+		    }
+		    else
+		    {
+			this.leds.fill(r,g,b);
+		    }
+                        res.status(200)
+                            .send({
+                                status: 200
+                            });
+	    } else if (typeof req.query.stop !== 'undefined') {
+		this.off();
+                        res.status(200)
+                            .send({
+                                status: 200
+                            });
+	    } else {
                 res.status(400)
                     .send({
                         status: 400,
                         error: 'Sequence not specified'
-                     });
+                    });
             }
+
         });
     },
 
@@ -72,12 +99,12 @@ module.exports = NodeHelper.create({
             try {
                 console.info('Trying to load leds');
 
-                // Internal reference to lpd8806-async
-                this.leds = new LPD8806(this.config.ledCount, this.config.device);
-
+                // Internal reference to rpi-ws2801
+                this.leds = require("rpi-ws2801");
+                this.leds.connect(this.config.ledCount, this.config.device);
                 // Initialize off
-                this.leds.allOFF();
-                this.leds.setMasterBrightness(this.config.brightness);
+                this.leds.fill(0x00, 0x00, 0x00);
+                //this.leds.setMasterBrightness(this.config.brightness);
 
                 console.log('[PiLights] Leds connected ok');
 
@@ -87,6 +114,11 @@ module.exports = NodeHelper.create({
             }
 
         } else if (notification === 'SEQUENCE') {
+            Promise.resolve(this.runSequence(payload)
+                .catch(function (err) {
+                    console.log('[PiLights] Sequence error: ' + err.message);
+                }));
+        } else if (notification === 'SEQUENCE2') {
             Promise.resolve(this.runSequence(payload)
                 .catch(function (err) {
                     console.log('[PiLights] Sequence error: ' + err.message);
@@ -103,7 +135,7 @@ module.exports = NodeHelper.create({
      */
     runSequence: function (sequence, iterations) {
         var self = this;
-        iterations = iterations || 2;
+        iterations = iterations || 10;
 
         return new Promise(function (resolve, reject) {
             var colors = [0, 0, 0];
@@ -130,13 +162,17 @@ module.exports = NodeHelper.create({
                 case 'pink_pulse':
                     colors = [255, 0, 255];
                     break;
+                case 'off':
+                    colors = [0, 0, 0];
+                    iterations = 1;
+                    break;
                 default:
                     reject(new Error('Unknown sequence: ' + sequence));
                     return;
                     break;
             }
+            resolve(self.pulse(colors[0], colors[1], colors[2], iterations, 100));
 
-            resolve(self.pulse(colors[0], colors[1], colors[2], iterations, 20));
         });
     },
 
@@ -155,7 +191,7 @@ module.exports = NodeHelper.create({
             //console.log('animation was running, delaying new animation');
 
             var self = this;
-            setTimeout(function() {
+            setTimeout(function () {
                 self.switchAnimation(cb);
             }, 100);
         } else {
@@ -180,17 +216,17 @@ module.exports = NodeHelper.create({
      */
     stopAnimation: function () {
         //console.log('[PiLights] Animation stopped.');
-        this.stopAnimationRequest = true;
+	this.stopAnimationRequest = true;
         this.animationRunning = false;
     },
 
     /**
      *
      */
-    update: function() {
-        if (this.leds) {
-            this.leds.update();
-        }
+    update: function () {
+        //        if (this.leds) {
+        //           this.leds.update();
+        //        }
     },
 
     /**
@@ -204,7 +240,7 @@ module.exports = NodeHelper.create({
     pulse: function (red, green, blue, iterations, speed) {
         if (this.leds) {
             this.switchAnimation(() => {
-                console.log('[PiLights] Pulse (' + red + ',' + green + ', ' + blue +') Iterations: ' + iterations + ', Speed: ' + speed);
+                console.log('[PiLights] Pulse (' + red + ',' + green + ', ' + blue + ') Iterations: ' + iterations + ', Speed: ' + speed);
                 this.flashEffect(red, green, blue, iterations, speed);
             });
         }
@@ -216,11 +252,11 @@ module.exports = NodeHelper.create({
      * @param g
      * @param b
      */
-    fillRGB: function(r, g, b) {
+    fillRGB: function (r, g, b) {
         if (this.leds) {
             this.switchAnimation(() => {
                 //console.log('[PiLights] Filling leds with', r, g, b);
-                this.leds.fillRGB(r, g, b);
+                this.leds.fill(r, g, b);
                 this.stopAnimation();
             });
         }
@@ -229,11 +265,11 @@ module.exports = NodeHelper.create({
     /**
      *
      */
-    off: function() {
+    off: function () {
         if (this.leds) {
             //console.log('[PiLights] Setting Leds Off');
-            this.leds.allOFF();
-            this.stopAnimation();
+	    this.stopAnimation();
+            this.leds.fill(0x00, 0x00, 0x00);
         }
     },
 
@@ -250,18 +286,15 @@ module.exports = NodeHelper.create({
         var step = 0.05;
         var total_iterations = 0;
 
-        speed      = speed || 10; // ms
+        speed = speed || 1000; // ms
         iterations = iterations || 99999;
 
         var level = 0.00;
-        var dir   = step;
+        var dir = step;
 
         function performStep() {
-            if (level <= 0.0) {
-                level = 0.0;
-                dir = step;
-                total_iterations++;
-            } else if (level >= 1.0) {
+	    console.log('performStep');
+            if (level = 1.0) {
                 level = 1.0;
                 dir = -step;
             }
@@ -279,12 +312,8 @@ module.exports = NodeHelper.create({
                 return;
             }
 
-            self.leds.setMasterBrightness(level);
-            self.leds.fill(new Color({
-                r: r,
-                g: g,
-                b: b
-            }));
+            self.leds.fill(r * level, b * level, g * level);
+
 
             setTimeout(performStep, speed);
         }
