@@ -37,6 +37,7 @@ modules: [
         module: 'MMM-PiLights',
         config: {
             ledCount: 64,
+            type: 'ws2801',
             device: '/dev/spidev0.0'
         }
     }
@@ -63,9 +64,15 @@ modules: [
             <td>Number LEDs on your strip</td>
         </tr>
         <tr>
+            <td><code>type</code></td>
+            <td>String</td>
+            <td><code>'ws2801'</code></td>
+            <td>Whether you are using a ws2801 or a LPD8806 strip - <code>'ws2801'</code> or <code>'lpd8806'</code></td>
+        </tr>
+        <tr>
             <td><code>device</code></td>
             <td>String</td>
-            <td><code>/dev/spidev0.0</code></td>
+            <td><code>'/dev/spidev0.0'</code></td>
             <td>The SPI Device for your LED strip</td>
         </tr>
     </tbody>
