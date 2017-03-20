@@ -39,9 +39,10 @@ Module.register('MMM-PiLights',{
         if (this.config && this.config.notifications) {
             for (i = 0; i < this.config.notifications.length; i++) {
             var noti = this.config.notifications[i];
-            if (noti.id && notificitation === noti.id)
+            if (notification === noti.id)
             {
-                this.sendSocketNotification("SEQUENCE", "blue_pulse");
+		var ani = noti.animation;
+                this.sendSocketNotification(ani.type, ani.name);
                 break;
             }
 
