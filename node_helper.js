@@ -101,6 +101,7 @@ module.exports = NodeHelper.create({
      * @param {*}      payload
      */
     socketNotificationReceived: function (notification, payload) {
+	console.info(notification);
         if (notification === 'START') {
             this.config = payload;
 
