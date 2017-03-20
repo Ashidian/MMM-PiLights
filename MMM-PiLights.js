@@ -10,15 +10,15 @@ Module.register('MMM-PiLights',{
         type:       'ws2801', // 'ws2801' or 'lpd8806'
         device:     '/dev/spidev0.0',
         brightness: 1.0, // between 0.0 and 1.0
-	notifications: [
-	    {
-		id: 'BUTTONPRESSED',
-		animation: {
-		    type: 'sequence',
-		    name: 'blue_pulse'
-		},
-	    },
-	]
+        notifications: [
+            {
+                id: 'BUTTONPRESSED',
+                animation: {
+                    type: 'sequence',
+                    name: 'blue_pulse'
+                },
+            },
+        ]
     },
 
     leds: null,
@@ -36,17 +36,17 @@ Module.register('MMM-PiLights',{
      * @param {*}      payload
      */
     notificationReceived: function(notification, payload) {
-	/*if (this.config.notifications) {
-	    for (i = 0; i < this.config.notifications.length; i++) {
-		var noti = this.config.notifications[i];
-		if (noti.id && notificitation === noti.id)
-		{
-		    this.sendSocketNotification("SEQUENCE", noti.animation.name);
-		    break;
-		}
+        if (this.config && this.config.notifications) {
+            for (i = 0; i < this.config.notifications.length; i++) {
+            var noti = this.config.notifications[i];
+            if (noti.id && notificitation === noti.id)
+            {
+                this.sendSocketNotification("SEQUENCE", "blue_pulse");
+                break;
+            }
 
-	    }
-	}*/
+            }
+        }
         if (notification === 'PILIGHTS_SEQUENCE') {
             this.sendSocketNotification("SEQUENCE", payload);
         }
