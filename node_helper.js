@@ -36,13 +36,13 @@ module.exports = NodeHelper.create({
 
             if (typeof req.query.sequence !== 'undefined') {
                 // Sequence
-		var seq = req.query.sequence
-		var r = Number(req.query.r) || 0;
-		var g = Number(req.query.g) || 0;
-		var b = Number(req.query.b) || 0;
-		
-		var iterations = Number(req.query.iterations) || 1;
-		var speed = Number(req.query.speed) || 10;
+                var seq = req.query.sequence
+                var r = Number(req.query.r) || 0;
+                var g = Number(req.query.g) || 0;
+                var b = Number(req.query.b) || 0;
+                
+                var iterations = Number(req.query.iterations) || 1;
+                var speed = Number(req.query.speed) || 10;
 
                 this.runSequence(req, iterations, speed, r, g, b)
                     .then(function () {
@@ -134,15 +134,19 @@ module.exports = NodeHelper.create({
             }
 
         } else if (notification === 'SEQUENCE') {
-            Promise.resolve(this.runSequence(payload)
-                .catch(function (err) {
-                    console.log('[PiLights] Sequence error: ' + err.message);
-                }));
-        } else if (notification === 'SEQUENCE2') {
-            Promise.resolve(this.runSequence(payload)
-                .catch(function (err) {
-                    console.log('[PiLights] Sequence error: ' + err.message);
-                }));
+            if (typeof payload === 'string' || payload instanceof String) {
+                Promise.resolve(this.runSequence(payload)
+                    .catch(function (err) {
+                        console.log('[PiLights] Sequence error: ' + err.message);
+                    }));
+            }
+            else
+            {
+                Promise.resolve(this.runSequence(payload.sequence, payload.iterations, payload.speed, payload.r, payload.g, payload.b)
+                    .catch(function (err) {
+                        console.log('[PiLights] Sequence error: ' + err.message);
+                    }));
+            }
         }
     },
 
@@ -199,11 +203,11 @@ module.exports = NodeHelper.create({
     runSequence: function (sequence, iterations, speed, r, g, b) {
         var self = this;
         iterations = iterations || 1;
-	speed = speed || 10;
+	    speed = speed || 10;
         var color = [0, 0, 0];
-	color[0] = r || 0;
-	color[1] = g || 0;
-	color[2] = b || 0;
+        color[0] = r || 0;
+        color[1] = g || 0;
+        color[2] = b || 0;
 
         return new Promise(function (resolve, reject) {
 

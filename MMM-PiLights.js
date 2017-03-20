@@ -9,7 +9,16 @@ Module.register('MMM-PiLights',{
         ledCount:   64,
         type:       'ws2801', // 'ws2801' or 'lpd8806'
         device:     '/dev/spidev0.0',
-        brightness: 1.0 // between 0.0 and 1.0
+        brightness: 1.0, // between 0.0 and 1.0
+        /*notifications: [
+            {
+                id: '',
+                animation: '',
+            },
+            {
+
+            }
+        ]*/
     },
 
     leds: null,
@@ -30,6 +39,7 @@ Module.register('MMM-PiLights',{
         if (notification === 'PILIGHTS_SEQUENCE') {
             this.sendSocketNotification('SEQUENCE', payload);
         }
+        Log.info(notification)
     },
 
     /**
