@@ -20,7 +20,7 @@ module.exports = NodeHelper.create({
     animationRunning: false,
     stopAnimationRequest: false,
     defaultSpeed: 100,
-    type: 'ws2801'
+    type: 'ws2801',
 
     /**
      * node_helper start method
@@ -36,8 +36,15 @@ module.exports = NodeHelper.create({
 
             if (typeof req.query.sequence !== 'undefined') {
                 // Sequence
+		var seq = req.query.sequence
+		var r = Number(req.query.r) || 0;
+		var g = Number(req.query.g) || 0;
+		var b = Number(req.query.b) || 0;
+		
+		var iterations = Number(req.query.iterations) || 1;
+		var speed = Number(req.query.speed) || 10;
 
-                this.runSequence(req.query.sequence, req.query.color)
+                this.runSequence(req, iterations, speed, r, g, b)
                     .then(function () {
                         res.status(200)
                             .send({
@@ -183,13 +190,20 @@ module.exports = NodeHelper.create({
      *
      * @param   {String}  sequence
      * @param   {Integer} [iterations]
-     * @param   {Color} [color]
+     * @param   {Integer} [speed]
+     * @param   {Integer} [r]
+     * @param   {Integer} [g]
+     * @param   {Integer} [b]
      * @returns {Promise}
      */
-    runSequence: function (sequence, iterations, color) {
+    runSequence: function (sequence, iterations, speed, r, g, b) {
         var self = this;
-        iterations = iterations || 10;
-        color = color || [0, 0, 0];
+        iterations = iterations || 1;
+	speed = speed || 10;
+        var color = [0, 0, 0];
+	color[0] = r || 0;
+	color[1] = g || 0;
+	color[2] = b || 0;
 
         return new Promise(function (resolve, reject) {
 
@@ -220,7 +234,7 @@ module.exports = NodeHelper.create({
                     //return;
                     break;
             }
-            resolve(self.pulse(colors[0], colors[1], colors[2], iterations, 100));
+            resolve(self.pulse(color[0], color[1], color[2], iterations, speed));
 
         });
     },
@@ -368,13 +382,14 @@ module.exports = NodeHelper.create({
                 self.stopAnimation();
                 return;
             }
-
-            self.leds.setMasterBrightness(level);
-            self.leds.fill(new Color({
-                r: r,
-                g: g,
-                b: b
-            }));
+	
+	    if (self.type == 'ws2801') {
+		self.leds.fill(r * level,g * level,b * level);
+	    }
+	    else if (self.type == 'lpd8806') {
+                self.leds.setMasterBrightness(level);
+                self.leds.fillRGB([r * level,g * level,b * level]);
+	    }
 
             setTimeout(performStep, speed);
         }
