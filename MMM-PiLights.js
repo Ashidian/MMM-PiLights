@@ -10,6 +10,7 @@ Module.register('MMM-PiLights',{
         type:       'ws2801', // 'ws2801' or 'lpd8806'
         device:     '/dev/spidev0.0',
         brightness: 1.0, // between 0.0 and 1.0
+<<<<<<< HEAD
 			        notifications: [
 			            {
 			                id: 'ALL_MODULES_STARTED',
@@ -19,6 +20,17 @@ Module.register('MMM-PiLights',{
 					},
 			            },
         			]
+=======
+        notifications: [
+            {
+                id: '',
+                animation: '',
+            },
+            {
+
+            }
+        ]
+>>>>>>> d2e02b3727656096f0f3b73c216191fff647f169
     },
 
     leds: null,
