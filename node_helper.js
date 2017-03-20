@@ -37,7 +37,7 @@ module.exports = NodeHelper.create({
             if (typeof req.query.sequence !== 'undefined') {
                 // Sequence
 
-                this.runSequence(req.query.sequence)
+                this.runSequence(req.query.sequence, req.query.color)
                     .then(function () {
                         res.status(200)
                             .send({
@@ -139,45 +139,85 @@ module.exports = NodeHelper.create({
         }
     },
 
+    runRGB: function(playload) {
+        var self = this;
+        var r = 0;
+        var g = 0;
+        var b = 0;
+        var time = -1;
+        var blink = 1;
+        if (typeof payload.all !== 'undefined')
+        {
+            r = Number(payload.all);
+            g = Number(payload.all);
+            b = Number(payload.all);
+        }
+        else if (typeof payload.r !== 'undefined' ||
+                 typeof payload.g !== 'undefined' ||
+                 typeof payload.b !== 'undefined')
+        {
+            r = Number(payload.r) || 0;
+            g = Number(payload.g) || 0;
+            b = Number(payload.b) || 0;
+        }
+        if (typeof payload.time !== 'undefined')
+        {
+            time = Number(payload.time);
+        }
+        if (typeof payload.blink !== 'undefined' &&
+            time > 0)
+        {
+            blink = Number(payload.blink);
+        }
+
+        return new Promise(function (resolve, reject) {
+            var colors = [0, 0, 0];
+
+            resolve(self.pulse(colors[0], colors[1], colors[2], iterations, 100));
+
+        });
+    },
+
     /**
      * Runs a light sequence
      *
      * @param   {String}  sequence
      * @param   {Integer} [iterations]
+     * @param   {Color} [color]
      * @returns {Promise}
      */
-    runSequence: function (sequence, iterations) {
+    runSequence: function (sequence, iterations, color) {
         var self = this;
         iterations = iterations || 10;
+        color = color || [0, 0, 0];
 
         return new Promise(function (resolve, reject) {
-            var colors = [0, 0, 0];
 
             switch (sequence) {
                 case 'blue_pulse':
-                    colors = [0, 0, 255];
+                    color = [0, 0, 255];
                     break;
                 case 'white_pulse':
-                    colors = [255, 255, 255];
+                    color = [255, 255, 255];
                     break;
                 case 'lightblue_pulse':
-                    colors = [0, 255, 255];
+                    color = [0, 255, 255];
                     break;
                 case 'red_pulse':
-                    colors = [255, 0, 0];
+                    color = [255, 0, 0];
                     break;
                 case 'green_pulse':
-                    colors = [0, 255, 0];
+                    color = [0, 255, 0];
                     break;
                 case 'orange_pulse':
-                    colors = [255, 170, 0];
+                    color = [255, 170, 0];
                     break;
                 case 'pink_pulse':
-                    colors = [255, 0, 255];
+                    color = [255, 0, 255];
                     break;
                 default:
-                    reject(new Error('Unknown sequence: ' + sequence));
-                    return;
+                    //reject(new Error('Unknown sequence: ' + sequence));
+                    //return;
                     break;
             }
             resolve(self.pulse(colors[0], colors[1], colors[2], iterations, 100));
@@ -189,35 +229,26 @@ module.exports = NodeHelper.create({
      * @param {Function} cb
      * @returns {*}
      */
-    switchAnimation: function (cb) {
+    startAnimation: function (cb) {
         if (!this.animationRunning) {
-            return this.startAnimation(cb);
+            this.stopAnimationRequest = false;
+            this.animationRunning = true;
+            return cb();
         }
 
         this.stopAnimationRequest = true;
 
         if (this.animationRunning) {
             //console.log('animation was running, delaying new animation');
-
             var self = this;
             setTimeout(function () {
-                self.switchAnimation(cb);
+                self.startAnimation(cb);
             }, 100);
         } else {
-            this.startAnimation(cb);
+            this.stopAnimationRequest = false;
+            this.animationRunning = true;
+            //return cb();
         }
-    },
-
-    /**
-     *
-     * @param {Function} cb
-     * @returns {Function}
-     */
-    startAnimation: function (cb) {
-        //console.log('[PiLights] Starting animation..');
-        this.stopAnimationRequest = false;
-        this.animationRunning = true;
-        return cb();
     },
 
     /**
@@ -225,7 +256,7 @@ module.exports = NodeHelper.create({
      */
     stopAnimation: function () {
         //console.log('[PiLights] Animation stopped.');
-	this.stopAnimationRequest = true;
+	    this.stopAnimationRequest = true;
         this.animationRunning = false;
     },
 
@@ -248,7 +279,7 @@ module.exports = NodeHelper.create({
      */
     pulse: function (red, green, blue, iterations, speed) {
         if (this.leds) {
-            this.switchAnimation(() => {
+            this.startAnimation(() => {
                 console.log('[PiLights] Pulse (' + red + ',' + green + ', ' + blue + ') Iterations: ' + iterations + ', Speed: ' + speed);
                 this.flashEffect(red, green, blue, iterations, speed);
             });
@@ -263,17 +294,17 @@ module.exports = NodeHelper.create({
      */
     fillRGB: function (r, g, b) {
         if (this.leds) {
-            this.switchAnimation(() => {
-		this.stopAnimation();
+            this.startAnimation(() => {
                 //console.log('[PiLights] Filling leds with', r, g, b);
-		if (this.type == 'ws2801')
-		{
+                if (this.type == 'ws2801')
+                {
                     this.leds.fill(r, g, b);
-		}
-		else if (this.type == 'lpd8806')
-		{
-		    this.leds.fillRGB(r, g, b);
-		}
+                }
+                else if (this.type == 'lpd8806')
+                {
+                    this.leds.fillRGB(r, g, b);
+                }
+                this.stopAnimation();
             });
         }
     },
@@ -309,15 +340,18 @@ module.exports = NodeHelper.create({
         var step = 0.05;
         var total_iterations = 0;
 
-        speed = speed || 1000; // ms
+        speed      = speed || 10; // ms
         iterations = iterations || 99999;
 
         var level = 0.00;
-        var dir = step;
+        var dir   = step;
 
         function performStep() {
-	    console.log('performStep');
-            if (level = 1.0) {
+            if (level <= 0.0) {
+                level = 0.0;
+                dir = step;
+                total_iterations++;
+            } else if (level >= 1.0) {
                 level = 1.0;
                 dir = -step;
             }
@@ -334,14 +368,13 @@ module.exports = NodeHelper.create({
                 self.stopAnimation();
                 return;
             }
-	    
-	    if (this.type == 'ws2801') {
-                self.leds.fill(r * level, b * level, g * level);
-	    }
-	    else if (this.type == 'lpd8806') {
-		self.leds.fillRGB(r * level, b * level, g * level);
-	    }
 
+            self.leds.setMasterBrightness(level);
+            self.leds.fill(new Color({
+                r: r,
+                g: g,
+                b: b
+            }));
 
             setTimeout(performStep, speed);
         }
