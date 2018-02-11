@@ -1,6 +1,6 @@
 /* global require */
 
-const _ = require('lodash');
+//const _ = require('lodash');
 const Color = require('color');
 const NodeHelper = require('node_helper');
 const bodyParser = require('body-parser');
@@ -14,6 +14,8 @@ var ajv = require('ajv')({
     coerceTypes: true
 });
 
+const animations = require('./animations/animations')
+
 module.exports = NodeHelper.create({
 
     config: {},
@@ -26,6 +28,7 @@ module.exports = NodeHelper.create({
      * node_helper start method
      */
     start: function () {
+
         console.log('[PiLights] Starting node_helper');
 
         this.expressApp.use(bodyParser.json());
